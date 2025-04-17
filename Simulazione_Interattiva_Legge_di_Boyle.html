@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Simulazione Termodinamica Base</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f7f7f7; }
+    .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input[type=range] { width: 100%; }
+    .output { margin-top: 20px; font-weight: bold; font-size: 1.2em; }
+    h2 { color: #2e6ee2; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🔬 Simulazione Interattiva – Legge di Boyle</h2>
+    <p>Modifica il <strong>volume (V)</strong> del gas mantenendo costante la temperatura. La pressione (P) si aggiornerà automaticamente secondo la legge di Boyle: <em>P × V = costante</em>.</p>
+
+    <label for="volume">Volume (V) [litri]:</label>
+    <input type="range" id="volume" name="volume" min="1" max="10" step="0.1" value="5">
+    <span id="volumeVal">5.0</span> L
+
+    <div class="output">
+      📌 Pressione (P): <span id="pressureVal">2.00</span> atm
+    </div>
+
+    <script>
+      const volumeSlider = document.getElementById('volume');
+      const volumeVal = document.getElementById('volumeVal');
+      const pressureVal = document.getElementById('pressureVal');
+      const constant = 10; // P * V = k => P = k / V
+
+      function updateValues() {
+        const V = parseFloat(volumeSlider.value);
+        const P = (constant / V).toFixed(2);
+        volumeVal.textContent = V.toFixed(1);
+        pressureVal.textContent = P;
+      }
+
+      volumeSlider.addEventListener('input', updateValues);
+      updateValues();
+    </script>
+  </div>
+</body>
+</html>
