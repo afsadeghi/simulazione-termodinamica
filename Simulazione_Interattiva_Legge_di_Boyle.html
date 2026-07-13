@@ -32,6 +32,11 @@
       const pressureVal = document.getElementById('pressureVal');
       const constant = 10; // P * V = k => P = k / V
 
+      /**
+       * Aggiorna i valori mostrati a schermo in base alla Legge di Boyle (P × V = costante).
+       * Legge il volume corrente dallo slider, calcola la pressione corrispondente
+       * e aggiorna il testo dei relativi elementi nella pagina.
+       */
       function updateValues() {
         const V = parseFloat(volumeSlider.value);
         const P = (constant / V).toFixed(2);
