@@ -1,47 +1,271 @@
-
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Simulazione Termodinamica Base</title>
+  <title>Simulazione Moto del Bipendolo</title>
   <style>
-    body { font-family: Arial; padding: 20px; background: #f7f7f7; }
-    .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    label { display: block; margin-top: 10px; font-weight: bold; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+    .container { max-width: 820px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 12px; font-weight: bold; }
     input[type=range] { width: 100%; }
-    .output { margin-top: 20px; font-weight: bold; font-size: 1.2em; }
-    h2 { color: #2e6ee2; }
+    .output { margin-top: 16px; font-weight: bold; font-size: 1.05em; }
+    h2 { color: #2e6ee2; margin-top: 0; }
+    .canvas-wrap { margin-top: 16px; display: flex; justify-content: center; }
+    canvas { background: #fdfdfd; border: 1px solid #d8d8d8; border-radius: 8px; }
+    .note { color: #4a4a4a; font-size: 0.95em; }
+    .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .button-row { margin-top: 12px; display: flex; gap: 10px; }
+    button { padding: 8px 14px; border: none; border-radius: 6px; background: #2e6ee2; color: white; cursor: pointer; }
+    button.secondary { background: #6f7d94; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>🔬 Simulazione Interattiva – Legge di Boyle</h2>
-    <p>Modifica il <strong>volume (V)</strong> del gas mantenendo costante la temperatura. La pressione (P) si aggiornerà automaticamente secondo la legge di Boyle: <em>P × V = costante</em>.</p>
+    <h2>🧩 Simulazione – Moto del bipendolo</h2>
+    <p class="note">Regola le lunghezze, le masse e gli angoli iniziali per osservare l'evoluzione caotica di un bipendolo. Il diagramma mostra il tracciato delle masse.</p>
 
-    <label for="volume">Volume (V) [litri]:</label>
-    <input type="range" id="volume" name="volume" min="1" max="10" step="0.1" value="5">
-    <span id="volumeVal">5.0</span> L
-
-    <div class="output">
-      📌 Pressione (P): <span id="pressureVal">2.00</span> atm
+    <div class="controls">
+      <div>
+        <label for="l1">Lunghezza asta 1 (L₁) [m]:</label>
+        <input type="range" id="l1" min="0.5" max="2.5" step="0.1" value="1.2">
+        <span id="l1Val">1.2</span>
+      </div>
+      <div>
+        <label for="l2">Lunghezza asta 2 (L₂) [m]:</label>
+        <input type="range" id="l2" min="0.5" max="2.5" step="0.1" value="1.0">
+        <span id="l2Val">1.0</span>
+      </div>
+      <div>
+        <label for="m1">Massa 1 (m₁) [kg]:</label>
+        <input type="range" id="m1" min="0.5" max="3.0" step="0.1" value="1.5">
+        <span id="m1Val">1.5</span>
+      </div>
+      <div>
+        <label for="m2">Massa 2 (m₂) [kg]:</label>
+        <input type="range" id="m2" min="0.5" max="3.0" step="0.1" value="1.0">
+        <span id="m2Val">1.0</span>
+      </div>
+      <div>
+        <label for="theta1">Angolo iniziale θ₁ [°]:</label>
+        <input type="range" id="theta1" min="-120" max="120" step="1" value="40">
+        <span id="theta1Val">40</span>°
+      </div>
+      <div>
+        <label for="theta2">Angolo iniziale θ₂ [°]:</label>
+        <input type="range" id="theta2" min="-120" max="120" step="1" value="-20">
+        <span id="theta2Val">-20</span>°
+      </div>
+      <div>
+        <label for="damping">Smorzamento:</label>
+        <input type="range" id="damping" min="0" max="0.05" step="0.005" value="0.01">
+        <span id="dampingVal">0.01</span>
+      </div>
     </div>
 
-    <script>
-      const volumeSlider = document.getElementById('volume');
-      const volumeVal = document.getElementById('volumeVal');
-      const pressureVal = document.getElementById('pressureVal');
-      const constant = 10; // P * V = k => P = k / V
+    <div class="button-row">
+      <button id="resetBtn">Reset</button>
+      <button id="pauseBtn" class="secondary">Pausa</button>
+    </div>
 
-      function updateValues() {
-        const V = parseFloat(volumeSlider.value);
-        const P = (constant / V).toFixed(2);
-        volumeVal.textContent = V.toFixed(1);
-        pressureVal.textContent = P;
+    <div class="output">
+      📌 Energia totale (approssimata): <span id="energyVal">0.0</span> J
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="pendulumCanvas" width="720" height="420"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const l1Slider = document.getElementById('l1');
+    const l2Slider = document.getElementById('l2');
+    const m1Slider = document.getElementById('m1');
+    const m2Slider = document.getElementById('m2');
+    const theta1Slider = document.getElementById('theta1');
+    const theta2Slider = document.getElementById('theta2');
+    const dampingSlider = document.getElementById('damping');
+
+    const l1Val = document.getElementById('l1Val');
+    const l2Val = document.getElementById('l2Val');
+    const m1Val = document.getElementById('m1Val');
+    const m2Val = document.getElementById('m2Val');
+    const theta1Val = document.getElementById('theta1Val');
+    const theta2Val = document.getElementById('theta2Val');
+    const dampingVal = document.getElementById('dampingVal');
+    const energyVal = document.getElementById('energyVal');
+
+    const resetBtn = document.getElementById('resetBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const canvas = document.getElementById('pendulumCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const origin = { x: canvas.width / 2, y: 80 };
+    const g = 9.81;
+
+    let l1 = parseFloat(l1Slider.value);
+    let l2 = parseFloat(l2Slider.value);
+    let m1 = parseFloat(m1Slider.value);
+    let m2 = parseFloat(m2Slider.value);
+    let damping = parseFloat(dampingSlider.value);
+
+    let theta1 = 0;
+    let theta2 = 0;
+    let omega1 = 0;
+    let omega2 = 0;
+    let isPaused = false;
+
+    const trail = [];
+    const maxTrail = 200;
+
+    function degToRad(deg) {
+      return (deg * Math.PI) / 180;
+    }
+
+    function updateValues() {
+      l1 = parseFloat(l1Slider.value);
+      l2 = parseFloat(l2Slider.value);
+      m1 = parseFloat(m1Slider.value);
+      m2 = parseFloat(m2Slider.value);
+      damping = parseFloat(dampingSlider.value);
+
+      l1Val.textContent = l1.toFixed(1);
+      l2Val.textContent = l2.toFixed(1);
+      m1Val.textContent = m1.toFixed(1);
+      m2Val.textContent = m2.toFixed(1);
+      theta1Val.textContent = theta1Slider.value;
+      theta2Val.textContent = theta2Slider.value;
+      dampingVal.textContent = damping.toFixed(3);
+    }
+
+    function resetSimulation() {
+      theta1 = degToRad(parseFloat(theta1Slider.value));
+      theta2 = degToRad(parseFloat(theta2Slider.value));
+      omega1 = 0;
+      omega2 = 0;
+      trail.length = 0;
+    }
+
+    function computeEnergy(theta1Rad, theta2Rad, omega1Val, omega2Val) {
+      const y1 = -l1 * Math.cos(theta1Rad);
+      const y2 = y1 - l2 * Math.cos(theta2Rad);
+      const v1Squared = (l1 * omega1Val) ** 2;
+      const v2Squared = v1Squared + (l2 * omega2Val) ** 2 +
+        2 * l1 * l2 * omega1Val * omega2Val * Math.cos(theta1Rad - theta2Rad);
+      const potential = (m1 + m2) * g * (y1 + l1) + m2 * g * (y2 + l1 + l2);
+      const kinetic = 0.5 * m1 * v1Squared + 0.5 * m2 * v2Squared;
+      return potential + kinetic;
+    }
+
+    function stepSimulation(dt) {
+      const delta = theta1 - theta2;
+      const sinDelta = Math.sin(delta);
+      const cosDelta = Math.cos(delta);
+
+      const denom1 = (m1 + m2) * l1 - m2 * l1 * cosDelta * cosDelta;
+      const denom2 = (l2 / l1) * denom1;
+
+      const a1 = ((m2 * l1 * omega1 * omega1 * sinDelta * cosDelta) +
+        (m2 * g * Math.sin(theta2) * cosDelta) +
+        (m2 * l2 * omega2 * omega2 * sinDelta) -
+        ((m1 + m2) * g * Math.sin(theta1))) / denom1;
+
+      const a2 = ((-m2 * l2 * omega2 * omega2 * sinDelta * cosDelta) +
+        ((m1 + m2) * g * Math.sin(theta1) * cosDelta) -
+        ((m1 + m2) * l1 * omega1 * omega1 * sinDelta) -
+        ((m1 + m2) * g * Math.sin(theta2))) / denom2;
+
+      omega1 += (a1 - damping * omega1) * dt;
+      omega2 += (a2 - damping * omega2) * dt;
+      theta1 += omega1 * dt;
+      theta2 += omega2 * dt;
+    }
+
+    function drawPendulum() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const x1 = origin.x + l1 * 120 * Math.sin(theta1);
+      const y1 = origin.y + l1 * 120 * Math.cos(theta1);
+      const x2 = x1 + l2 * 120 * Math.sin(theta2);
+      const y2 = y1 + l2 * 120 * Math.cos(theta2);
+
+      trail.push({ x: x2, y: y2 });
+      if (trail.length > maxTrail) {
+        trail.shift();
       }
 
-      volumeSlider.addEventListener('input', updateValues);
-      updateValues();
-    </script>
-  </div>
+      ctx.strokeStyle = 'rgba(46, 110, 226, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      trail.forEach((point, index) => {
+        if (index === 0) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
+        }
+      });
+      ctx.stroke();
+
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(origin.x, origin.y);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#2e6ee2';
+      ctx.beginPath();
+      ctx.arc(x1, y1, 10 + m1 * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#e26e2e';
+      ctx.beginPath();
+      ctx.arc(x2, y2, 10 + m2 * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#555';
+      ctx.beginPath();
+      ctx.arc(origin.x, origin.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    let lastTime = null;
+    function animate(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const deltaMs = timestamp - lastTime;
+      lastTime = timestamp;
+
+      if (!isPaused) {
+        const dt = Math.min(deltaMs, 32) / 1000;
+        stepSimulation(dt);
+        const energy = computeEnergy(theta1, theta2, omega1, omega2);
+        energyVal.textContent = energy.toFixed(2);
+      }
+
+      drawPendulum();
+      requestAnimationFrame(animate);
+    }
+
+    [l1Slider, l2Slider, m1Slider, m2Slider, theta1Slider, theta2Slider, dampingSlider]
+      .forEach((slider) => slider.addEventListener('input', () => {
+        updateValues();
+        if (slider === theta1Slider || slider === theta2Slider) {
+          resetSimulation();
+        }
+      }));
+
+    resetBtn.addEventListener('click', () => {
+      resetSimulation();
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      isPaused = !isPaused;
+      pauseBtn.textContent = isPaused ? 'Riprendi' : 'Pausa';
+    });
+
+    updateValues();
+    resetSimulation();
+    requestAnimationFrame(animate);
+  </script>
 </body>
 </html>
